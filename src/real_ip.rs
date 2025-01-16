@@ -123,8 +123,10 @@ impl IntoResponse for IpAddrRejection {
     }
 }
 
-#[async_trait::async_trait]
-impl<S> FromRequestParts<S> for RealIp {
+impl<S> FromRequestParts<S> for RealIp
+where
+    S: Sync,
+{
     type Rejection = IpAddrRejection;
 
     async fn from_request_parts(parts: &mut Parts, _: &S) -> Result<Self, Self::Rejection> {
@@ -139,8 +141,10 @@ impl<S> FromRequestParts<S> for RealIp {
     }
 }
 
-#[async_trait::async_trait]
-impl<S> FromRequestParts<S> for RealIpPrivacyMask {
+impl<S> FromRequestParts<S> for RealIpPrivacyMask
+where
+    S: Sync,
+{
     type Rejection = IpAddrRejection;
 
     async fn from_request_parts(parts: &mut Parts, _: &S) -> Result<Self, Self::Rejection> {

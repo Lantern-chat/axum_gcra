@@ -22,7 +22,7 @@ itoa = ["dep:itoa"]
 [dependencies]
 tower = "0.4"
 scc = "2"
-axum = { version = "0.7", default-features = false, features = ["matched-path"] }
+axum = { version = "0.8", default-features = false, features = ["matched-path"] }
 http = "1.1.0"
 futures-util = "0.3.30"
 pin-project-lite = "0.2.14"
@@ -33,7 +33,7 @@ async-trait = { version = "0.1.81", optional = true }
 itoa = { version = "1.0.11", optional = true }
 
 [dev-dependencies]
-axum = { version = "0.7", default-features = true }
+axum = { version = "0.8", default-features = true }
 rustc-hash = "2.0.0"
 tokio = { version = "1", features = ["full"] }
 
