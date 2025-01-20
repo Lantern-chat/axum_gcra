@@ -29,7 +29,7 @@ async fn main() {
         .route_layer(
             // the key is a tuple of the client's IP address and a constant value
             // `Extract` is a helper type that allows using stateless key extractors
-            RateLimitLayer::<Key, Hash>::builder()
+            RateLimitLayer::<Key, (), Hash>::builder(())
             .with_default_quota(Quota::simple(Duration::from_secs(5)))
             // these could be simplified using a macro to insert the quota values using `add_quota` alongside the routes above
             .with_route((Method::GET, "/build"), Quota::simple(Duration::from_secs(2)))
