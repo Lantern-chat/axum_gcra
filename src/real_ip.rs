@@ -211,14 +211,27 @@ impl<I> Layer<I> for RealIpLayer {
     }
 }
 
-pub(crate) fn get_ip_from_parts(parts: &Parts) -> Option<RealIp> {
-    fn parse_ip(s: &HeaderValue) -> Option<IpAddr> {
-        s.to_str()
-            .ok()
-            .and_then(|s| s.split(&[',', ':']).next())
-            .and_then(|s| IpAddr::from_str(s.trim()).ok())
-    }
+fn parse_ip(s: &HeaderValue) -> Option<IpAddr> {
+    let s = s.to_str().ok()?;
 
+    // get the first element
+    let first = s.split(',').next()?.trim();
+
+    // cut the port and [] if they exists
+    let ip_only = if let Some(part) = first.strip_prefix('[') {
+        // ipv6 with port
+        part.split(']').next()?
+    } else if first.chars().map(|c| if c == ':' { 1 } else { 0 }).sum::<u32>() == 1 {
+        // take off the port from an IPv4
+        first.split(':').next()?
+    } else {
+        first
+    };
+
+    IpAddr::from_str(ip_only).ok()
+}
+
+pub(crate) fn get_ip_from_parts(parts: &Parts) -> Option<RealIp> {
     static HEADERS: [HeaderName; 10] = [
         HeaderName::from_static("cf-connecting-ip"), // used by Cloudflare sometimes
         HeaderName::from_static("x-cluster-client-ip"), // used by AWS sometimes
@@ -244,4 +257,45 @@ pub(crate) fn get_ip_from_parts(parts: &Parts) -> Option<RealIp> {
     }
 
     None
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_ip_v4() {
+        let header = HeaderValue::from_static(" 10.0.0.1");
+        assert_eq!(IpAddr::from_str("10.0.0.1").ok(), parse_ip(&header));
+
+        // with port
+        let header = HeaderValue::from_static(" 10.0.0.1:50000");
+        assert_eq!(IpAddr::from_str("10.0.0.1").ok(), parse_ip(&header));
+
+        // multiple hops
+        let header = HeaderValue::from_static(" 10.0.0.1, 10.10.10.10");
+        assert_eq!(IpAddr::from_str("10.0.0.1").ok(), parse_ip(&header));
+
+        // many with port
+        let header = HeaderValue::from_static(" 10.0.0.1:50000, 10.10.10.10:50000");
+        assert_eq!(IpAddr::from_str("10.0.0.1").ok(), parse_ip(&header));
+    }
+
+    #[test]
+    fn parse_ip_v6() {
+        let header = HeaderValue::from_static(" 2fa::1");
+        assert_eq!(IpAddr::from_str("2fa::1").ok(), parse_ip(&header));
+
+        // with port
+        let header = HeaderValue::from_static(" [2fa::1]:50000");
+        assert_eq!(IpAddr::from_str("2fa::1").ok(), parse_ip(&header));
+
+        // with more proxies
+        let header = HeaderValue::from_static(" 2fa::1, 2fa::2");
+        assert_eq!(IpAddr::from_str("2fa::1").ok(), parse_ip(&header));
+
+        // many with port
+        let header = HeaderValue::from_static(" [2fa::1]:50000, [2fa::2]:50000");
+        assert_eq!(IpAddr::from_str("2fa::1").ok(), parse_ip(&header));
+    }
 }
